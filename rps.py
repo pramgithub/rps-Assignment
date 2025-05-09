@@ -246,4 +246,32 @@ class RockPaperScissorsGame:
             'contours': contours_display,
             'computer_choice': computer_choice_img
         }, enhanced_frame
+    def identify_gesture(self, hand_landmarks):
+        """Identify the hand gesture based on the landmarks"""
+        # Get the landmark coordinates
+        points = []
+        for landmark in hand_landmarks.landmark:
+            points.append((landmark.x, landmark.y, landmark.z))
+        
+        # Calculate finger states (up or down)
+        thumb_up = points[4][0] < points[3][0]  # For right hand
+        index_up = points[8][1] < points[6][1]
+        middle_up = points[12][1] < points[10][1]
+        ring_up = points[16][1] < points[14][1]
+        pinky_up = points[20][1] < points[18][1]
+        
+        # Identify gesture - only Rock, Paper, Scissors
+        if not index_up and not middle_up and not ring_up and not pinky_up:
+            return "Rock"
+        elif index_up and middle_up and not ring_up and not pinky_up:
+            return "Scissors"
+        elif index_up and middle_up and ring_up and pinky_up:
+            return "Paper"
+        else:
+            return "Unknown"
     
+    def get_computer_gesture(self):
+        """Generate a random gesture for the computer"""
+        return random.choice(["Rock", "Paper", "Scissors"])
+    
+    def create_computer_choice_image(self):
