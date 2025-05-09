@@ -101,8 +101,9 @@ class RockPaperScissorsGame:
         
         # Start the video loop
         self.update_frame()
+    ////
     
-        def update_frame(self):
+    def update_frame(self):
         """Update the camera feed and processing displays"""
         ret, frame = self.cap.read()
         if not ret:
@@ -245,4 +246,4 @@ class RockPaperScissorsGame:
             'contours': contours_display,
             'computer_choice': computer_choice_img
         }, enhanced_frame
-   
+    
