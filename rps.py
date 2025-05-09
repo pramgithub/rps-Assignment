@@ -275,3 +275,52 @@ class RockPaperScissorsGame:
         return random.choice(["Rock", "Paper", "Scissors"])
     
     def create_computer_choice_image(self):
+        def determine_winner(self):
+        """Determine the winner of the game"""
+        user = self.user_gesture
+        computer = self.computer_gesture
+        
+        # Define the winning rules
+        if user == computer:
+            self.result = "Tie!"
+            self.score["ties"] += 1
+        elif user == "Unknown":
+            self.result = "Invalid gesture. Try again!"
+        else:
+            # Standard rules for Rock, Paper, Scissors
+            if (user == "Rock" and computer == "Scissors") or \
+               (user == "Paper" and computer == "Rock") or \
+               (user == "Scissors" and computer == "Paper"):
+                self.result = "You win!"
+                self.score["user"] += 1
+            else:
+                self.result = "Computer wins!"
+                self.score["computer"] += 1
+        
+        # Update the UI with the result
+        self.result_label.config(text=f"You chose {user}, Computer chose {computer}. {self.result}")
+        self.score_label.config(text=f"Score: You {self.score['user']} - {self.score['computer']} Computer (Ties: {self.score['ties']})")
+    
+    def update_history(self):
+        """Update the game history display"""
+        self.game_history.appendleft(f"You: {self.user_gesture} vs Computer: {self.computer_gesture} - {self.result}")
+        
+        # Update the history text widget
+        self.history_text.config(state=tk.NORMAL)
+        self.history_text.delete(1.0, tk.END)
+        for i, entry in enumerate(self.game_history):
+            self.history_text.insert(tk.END, f"{i+1}. {entry}\n")
+        self.history_text.config(state=tk.DISABLED)
+    
+    def quit_game(self):
+        """Clean up and quit the game"""
+        if self.cap.isOpened():
+            self.cap.release()
+        self.hands.close()
+        self.root.destroy()
+
+if __name__ == "_main_":
+    root = tk.Tk()
+    app = RockPaperScissorsGame(root)
+    root.protocol("WM_DELETE_WINDOW", app.quit_game)
+root.mainloop()
