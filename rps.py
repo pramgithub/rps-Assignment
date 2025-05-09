@@ -101,5 +101,149 @@ class RockPaperScissorsGame:
         
         # Start the video loop
         self.update_frame()
+    ////
     
+    def update_frame(self):
+        """Update the camera feed and processing displays"""
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Error: Failed to grab frame")
+            return
+        
+        # Flip frame horizontally for a selfie-view
+        frame = cv2.flip(frame, 1)
+        original_frame = frame.copy()
+        
+        # Process the frame for hand gesture recognition
+        processed_images, enhanced_frame = self.process_frame(frame)
+        
+        # Display the enhanced frame with hand detection on the main camera feed
+        camera_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
+        camera_image = Image.fromarray(camera_image)
+        camera_image = ImageTk.PhotoImage(image=camera_image)
+        self.camera_label.imgtk = camera_image
+        self.camera_label.config(image=camera_image)
+        
+        # Update the processing steps visualization
+        self.update_processing_visualization(processed_images)
+        
+        # If countdown is active, update it
+        if self.countdown_active:
+            self.countdown_label.config(text=str(self.countdown_value))
+        
+        # Schedule next frame update
+        self.root.after(10, self.update_frame)
+    
+    def process_frame(self, frame):
+        """Process the frame to detect hand gestures"""
+        # Create a larger frame to show the hand detection
+        enhanced_frame = frame.copy()
+        
+        # Convert to RGB for MediaPipe and visualization
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Get grayscale image
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Apply Gaussian blur
+        blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+        
+        # Apply thresholding
+        _, threshold = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+        
+        # Apply adaptive thresholding for better results
+        binary = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                      cv2.THRESH_BINARY_INV, 11, 2)
+        
+        # Find contours
+        contours, _ = cv2.findContours(binary.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours_display = frame.copy()
+        cv2.drawContours(contours_display, contours, -1, (0, 255, 0), 2)
+        
+        # MediaPipe hand detection
+        results = self.hands.process(rgb_frame)
+        detected_gesture = "None"
+        
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                # Draw hand landmarks on the enhanced frame
+                self.mp_drawing.draw_landmarks(
+                    enhanced_frame,
+                    hand_landmarks,
+                    self.mp_hands.HAND_CONNECTIONS,
+                    self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                    self.mp_drawing_styles.get_default_hand_connections_style()
+                )
+                
+                # Identify gesture
+                detected_gesture = self.identify_gesture(hand_landmarks)
+                
+                # If the countdown is at 0 and we haven't stored the user's gesture yet
+                if self.countdown_active and self.countdown_value == 0 and self.user_gesture is None:
+                    self.user_gesture = detected_gesture
+                    self.computer_gesture = self.get_computer_gesture()
+                    self.determine_winner()
+                    self.countdown_active = False
+                    self.update_history()
+        
+        # Create computer's choice image
+        computer_choice_img = self.create_computer_choice_image()
+        
+        # Add gesture information to the enhanced frame
+        cv2.putText(
+            enhanced_frame, 
+            f"Detected: {detected_gesture}", 
+            (10, 50), 
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            1, 
+            (0, 255, 0), 
+            2, 
+            cv2.LINE_AA
+        )
+        
+        # Add countdown to the enhanced frame if active
+        if self.countdown_active:
+            cv2.putText(
+                enhanced_frame,
+                f"Countdown: {self.countdown_value if self.countdown_value > 0 else 'SHOOT!'}",
+                (10, 100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 0, 0),
+                2,
+                cv2.LINE_AA
+            )
+        
+        # Add game result to the enhanced frame if available
+        if self.user_gesture is not None and self.result is not None:
+            cv2.putText(
+                enhanced_frame,
+                f"You: {self.user_gesture} vs PC: {self.computer_gesture}",
+                (10, enhanced_frame.shape[0] - 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 165, 0),
+                2,
+                cv2.LINE_AA
+            )
+            
+            cv2.putText(
+                enhanced_frame,
+                f"Result: {self.result}",
+                (10, enhanced_frame.shape[0] - 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 165, 0),
+                2,
+                cv2.LINE_AA
+            )
+        
+        return {
+            'rgb': rgb_frame,
+            'gray': gray,
+            'blurred': blurred,
+            'threshold': threshold,
+            'contours': contours_display,
+            'computer_choice': computer_choice_img
+        }, enhanced_frame
     
