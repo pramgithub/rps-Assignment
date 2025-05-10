@@ -10,7 +10,7 @@ import mediapipe as mp
 from collections import deque
 
 class RockPaperScissorsGame:
-    def __init__(self, root):
+    def _init_(self, root):
         self.root = root
         self.root.title("Rock Paper Scissors Game")
         self.root.geometry("1200x800")
@@ -101,7 +101,7 @@ class RockPaperScissorsGame:
         
         # Start the video loop
         self.update_frame()
-    ////
+
     
     def update_frame(self):
         """Update the camera feed and processing displays"""
@@ -246,6 +246,7 @@ class RockPaperScissorsGame:
             'contours': contours_display,
             'computer_choice': computer_choice_img
         }, enhanced_frame
+    
     def identify_gesture(self, hand_landmarks):
         """Identify the hand gesture based on the landmarks"""
         # Get the landmark coordinates
@@ -275,7 +276,86 @@ class RockPaperScissorsGame:
         return random.choice(["Rock", "Paper", "Scissors"])
     
     def create_computer_choice_image(self):
-        def determine_winner(self):
+        """Create an image showing the computer's choice"""
+        # Create a blank image
+        img = np.ones((300, 300, 3), dtype=np.uint8) * 255
+        
+        # If the computer has made a choice, draw it
+        if self.computer_gesture:
+            text = self.computer_gesture
+            # Draw different symbols based on the choice
+            if text == "Rock":
+                cv2.circle(img, (150, 150), 80, (100, 100, 100), -1)
+            elif text == "Paper":
+                cv2.rectangle(img, (70, 70), (230, 230), (0, 128, 255), -1)
+            elif text == "Scissors":
+                # Draw a scissors shape
+                cv2.line(img, (100, 100), (200, 200), (0, 0, 255), 10)
+                cv2.line(img, (200, 100), (100, 200), (0, 0, 255), 10)
+        
+            # Add text label
+            cv2.putText(img, text, (80, 270), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        else:
+            # Display "Waiting..." when no choice has been made
+            cv2.putText(img, "Waiting...", (80, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 100, 100), 2)
+        
+        return img
+    
+    def update_processing_visualization(self, processed_images):
+        """Update the processing steps visualization"""
+        # Clear all axes
+        for ax in self.axes:
+            ax.clear()
+            ax.axis('off')
+        
+        # Set titles
+        self.axes[0].set_title('RGB')
+        self.axes[1].set_title('Grayscale')
+        self.axes[2].set_title('Blurred')
+        self.axes[3].set_title('Thresholded')
+        self.axes[4].set_title('Contours')
+        self.axes[5].set_title('Computer\'s Choice')
+        
+        # Display images
+        self.axes[0].imshow(processed_images['rgb'])
+        self.axes[1].imshow(processed_images['gray'], cmap='gray')
+        self.axes[2].imshow(processed_images['blurred'], cmap='gray')
+        self.axes[3].imshow(processed_images['threshold'], cmap='gray')
+        self.axes[4].imshow(cv2.cvtColor(processed_images['contours'], cv2.COLOR_BGR2RGB))
+        self.axes[5].imshow(cv2.cvtColor(processed_images['computer_choice'], cv2.COLOR_BGR2RGB))
+        
+        # Update the canvas
+        self.fig.tight_layout()
+        self.canvas.draw()
+    
+    def start_countdown(self):
+        """Start the countdown for the game"""
+        # Reset game state
+        self.user_gesture = None
+        self.computer_gesture = None
+        self.result = None
+        self.countdown_active = True
+        self.countdown_value = 3
+        self.result_label.config(text="Get ready to show your gesture!")
+        self.countdown_label.config(text=str(self.countdown_value))
+        
+        # Start the countdown timer
+        self.root.after(1000, self.update_countdown)
+    
+    def update_countdown(self):
+        """Update the countdown timer"""
+        self.countdown_value -= 1
+        
+        if self.countdown_value >= 0:
+            self.countdown_label.config(text=str(self.countdown_value))
+            if self.countdown_value == 0:
+                self.countdown_label.config(text="SHOOT!")
+            self.root.after(1000, self.update_countdown)
+        else:
+            # After "SHOOT!" is displayed for a second, clear it
+            self.countdown_label.config(text="")
+    
+    def determine_winner(self):
         """Determine the winner of the game"""
         user = self.user_gesture
         computer = self.computer_gesture
@@ -323,4 +403,4 @@ if __name__ == "_main_":
     root = tk.Tk()
     app = RockPaperScissorsGame(root)
     root.protocol("WM_DELETE_WINDOW", app.quit_game)
-root.mainloop()
+    root.mainloop()
